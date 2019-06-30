@@ -24,24 +24,33 @@ using Rocket.Core.Plugins;
 
 namespace ImperialPlugins.UnturnedProfiler
 {
-    public class ProfilerPlugin : RocketPlugin<ProfilerConfig>
-    {
-        public const string HarmonyInstanceId = "com.imperialplugins.unturnedprofiler";
+	public class ProfilerPlugin: RocketPlugin<ProfilerConfig>
+	{
+		public const string HarmonyInstanceId = "host.dsn.com.imperialplugins.unturnedprofiler";
 
-        public static ProfilerPlugin Instance { get; private set; }
-        public bool IsProfiling { get; internal set; }
-        public HarmonyInstance Harmony { get; } = HarmonyInstance.Create(HarmonyInstanceId);
+		public static ProfilerPlugin Instance
+		{
+			get; private set;
+		}
+		public bool IsProfiling
+		{
+			get; internal set;
+		}
+		public HarmonyInstance Harmony { get; } = HarmonyInstance.Create(HarmonyInstanceId);
 
-        protected override void Load()
-        {
-            base.Load();
-            Instance = this;
-        }
+		protected override void Load()
+		{
+			base.Load();
+			Instance = this;
 
-        protected override void Unload()
-        {
-            base.Unload();
-            Instance = null;
-        }
-    }
+			DSN.Host.RCommand.RCommand.Register("prof_begin", new Commands.CommandStartProfiling());
+			DSN.Host.RCommand.RCommand.Register("prof_end", new Commands.CommandStopProfiling());
+		}
+
+		protected override void Unload()
+		{
+			base.Unload();
+			Instance = null;
+		}
+	}
 }

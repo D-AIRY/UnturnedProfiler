@@ -36,21 +36,19 @@ using Logger = Rocket.Core.Logging.Logger;
 
 namespace ImperialPlugins.UnturnedProfiler.Commands
 {
-    public class CommandStartProfiling : IRocketCommand
-    {
-        public void Execute(IRocketPlayer caller, string[] command)
+    public class CommandStartProfiling : DSN.Host.RCommand.RCommand
+	{
+        public override string Execute(string args)
         {
             var pluginInstance = ProfilerPlugin.Instance;
 
             if (pluginInstance.IsProfiling)
             {
-                UnturnedChat.Say(caller, "Profiling is already running", Color.red);
-                return;
+				return(Error("Profiling is already running"));
             }
 
             pluginInstance.IsProfiling = true;
 
-            UnturnedChat.Say(caller, "Starting Profiling...");
             ThreadPool.QueueUserWorkItem(c =>
             {
                 foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
@@ -64,15 +62,14 @@ namespace ImperialPlugins.UnturnedProfiler.Commands
                         string message =
                             $"Could not load assembly for patching: {assembly.FullName}, profiling will be disabled for this assembly. See console for details.";
 
-                        UnturnedChat.Say(caller, message, Color.red);
                         Logger.LogException(e, message);
                     }
                 }
 
                 RegisterEvents();
-                UnturnedChat.Say(caller, "Profiling started.");
             });
-        }
+			return(Success(null));
+		}
 
         private void RegisterEvents()
         {
@@ -221,12 +218,5 @@ namespace ImperialPlugins.UnturnedProfiler.Commands
             //    }
             //}
         }
-
-        public AllowedCaller AllowedCaller { get; } = AllowedCaller.Both;
-        public string Name { get; } = "StartProfiling";
-        public string Help { get; } = "Starts profiling.";
-        public string Syntax { get; } = "";
-        public List<string> Aliases { get; } = new List<string> { "startp" };
-        public List<string> Permissions { get; }
     }
 }

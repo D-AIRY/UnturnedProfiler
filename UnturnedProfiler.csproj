@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>net461</TargetFrameworks>
-    <AssemblyName>UnturnedProfiler</AssemblyName>
+    <AssemblyName>DSNUnturnedProfiler</AssemblyName>
     <RootNamespace>ImperialPlugins.UnturnedProfiler</RootNamespace>
     <OutputType>Library</OutputType>
   </PropertyGroup>
@@ -14,6 +14,12 @@
     </Reference>
     <Reference Include="Assembly-CSharp-firstpass">
       <HintPath>lib\Assembly-CSharp-firstpass.dll</HintPath>
+    </Reference>
+    <Reference Include="DSN.Host">
+      <HintPath>lib\DSN.Host.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>lib\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="Rocket.API">
       <HintPath>lib\Rocket.API.dll</HintPath>

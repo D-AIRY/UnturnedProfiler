@@ -19,79 +19,71 @@
 #endregion
 
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
 using ImperialPlugins.UnturnedProfiler.Extensions;
 using ImperialPlugins.UnturnedProfiler.Patches;
-using Rocket.API;
-using Rocket.Unturned.Chat;
-using UnityEngine;
+using Newtonsoft.Json.Linq;
 
 namespace ImperialPlugins.UnturnedProfiler.Commands
 {
-    public class CommandStopProfiling : IRocketCommand
-    {
-        public void Execute(IRocketPlayer caller, string[] command)
-        {
-            var pluginInstance = ProfilerPlugin.Instance;
-            var registrations = HarmonyProfiling.GetAllRegistrations();
+	public class CommandStopProfiling: DSN.Host.RCommand.RCommand
+	{
+		public override string Execute(string args)
+		{
+			var pluginInstance = ProfilerPlugin.Instance;
+			var registrations = HarmonyProfiling.GetAllRegistrations();
 
-            if (!pluginInstance.IsProfiling)
-            {
-                UnturnedChat.Say(caller, "Profiling is not running", Color.red);
-                return;
-            }
+			if(!pluginInstance.IsProfiling)
+			{
+				return(Error("Profiling is not running"));
+			}
 
-            string fileName = "Profiler-" + DateTime.Now.Ticks + ".log";
+			pluginInstance.IsProfiling = false;
+			var measureTypes = registrations.Values.Where(d => d.Measurements.Count > 0).Select(c => c.MeasureType).Distinct();
 
-            pluginInstance.IsProfiling = false;
-            using (var logger = new StreamWriter(fileName))
-            {
-                var measureTypes = registrations.Values.Where(d => d.Measurements.Count > 0).Select(c => c.MeasureType).Distinct();
+			JObject data = new JObject();
 
-                foreach (var measureType in measureTypes)
-                {
-                    StringBuilder sb = new StringBuilder();
-                    sb.AppendLine($"{measureType}:");
+			foreach(var measureType in measureTypes)
+			{
+				StringBuilder sb = new StringBuilder();
+				JArray measureList = new JArray();
 
-                    bool anyCallsMeasured = false;
-                    foreach (var measurableMethod in registrations.Values.Where(d => d.MeasureType.Equals(measureType, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        var assemblyName = measurableMethod.Method.DeclaringType?.Assembly?.GetName()?.Name?.StripUtf8() ?? "<unknown>";
-                        var measurements = measurableMethod.Measurements;
-                        if (!measurements.Any())
-                        {
-                            continue;
-                        }
+				bool anyCallsMeasured = false;
+				foreach(var measurableMethod in registrations.Values.Where(d => d.MeasureType.Equals(measureType, StringComparison.OrdinalIgnoreCase)))
+				{
+					var assemblyName = measurableMethod.Method.DeclaringType?.Assembly?.GetName()?.Name?.StripUtf8() ?? "<unknown>";
+					var measurements = measurableMethod.Measurements;
+					if(!measurements.Any())
+					{
+						continue;
+					}
 
-                        string methodName = measurableMethod.Method.GetFullName().StripUtf8();
+					string methodName = measurableMethod.Method.GetFullName().StripUtf8();
 
-                        //calculate & log averages
-                        sb.AppendLine($"\t {assemblyName} {methodName} (avg: {measurements.Average():0}ms, min: {measurements.Min():0}ms, max: {measurements.Max():0}ms, calls: {measurements.Count})");
-                        anyCallsMeasured = true;
-                    }
+					//calculate & log averages
+					JObject obj = new JObject
+					{
+						{"assemblyName", assemblyName},
+						{"methodName", methodName},
+						{"avg", measurements.Average()},
+						{"min", measurements.Min()},
+						{"max", measurements.Max()},
+						{"calls", measurements.Count}
+					};
+					measureList.Add(obj);
 
-                    if (anyCallsMeasured)
-                    {
-                        logger.Write(sb.ToString());
-                        logger.WriteLine();
-                    }
-                }
+					anyCallsMeasured = true;
+				}
 
-                logger.Close();
-            }
+				if(anyCallsMeasured)
+				{
+					data.Add(measureType, measureList);
+				}
+			}
 
-            HarmonyProfiling.ClearRegistrations();
-            UnturnedChat.Say(caller, $"Profiling stopped. Saved as {fileName}.");
-        }
-
-        public AllowedCaller AllowedCaller { get; } = AllowedCaller.Both;
-        public string Name { get; } = "StopProfiling";
-        public string Help { get; } = "Stops profiling.";
-        public string Syntax { get; } = "";
-        public List<string> Aliases { get; } = new List<string> { "stopp" };
-        public List<string> Permissions { get; }
-    }
+			HarmonyProfiling.ClearRegistrations();
+			return(Success(data));
+		}
+	}
 }
